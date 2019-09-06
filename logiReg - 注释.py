@@ -163,6 +163,7 @@ def runExpe(data, theta, batchSize, stopType, thresh, alpha):
     ax.set_xlabel('Iterations')
     ax.set_ylabel('Cost')
     ax.set_title(name.upper() + ' - Error vs. Iteration')
+    plt.show()
     return theta
 
 '''
@@ -172,56 +173,53 @@ def runExpe(data, theta, batchSize, stopType, thresh, alpha):
     3 小批量梯度下降，即mini-batch，每次更新选择一小部分，比如32/64/128个样本等，这样的方式很实用，但应该先对数据进行洗牌，打乱顺序。
 '''
 
-# 选择的梯度下降方法是基于所有样本的
 n = 100
-
+'''
+# 选择的梯度下降方法是基于所有样本的,下面是三种停止的方式
 # 1 根据固定迭代次数停止，设定为迭代5k次
     # stop_type为stop_iter,指定迭代次数的参数是thresh=5000,学习率(步长)是alpha=0.000001.
     # 步长过大有可能在取值的时候越过真实值而进行错误迭代，一般1w数据以内可先用0.01
 ##runExpe(orig_data, theta, n, STOP_ITER, thresh=5000, alpha=0.000001)
 
-##runExpe(orig_data, theta, 1, STOP_ITER, thresh=5000, alpha=0.000001)
-# 随机取样波动非常大，完全不收敛，学习率也过大
-##runExpe(orig_data, theta, 16, STOP_ITER, thresh=5000, alpha=0.001)
-# 随机小批量取样，虽然样本大了，但是浮动仍然大
+# 2 根据损失值停止
+    # stop_type为stop_cost,不人为设置迭代次数，设定阈值 1E-6, 大约需要11w次迭代
+##runExpe(orig_data, theta, n, STOP_COST, thresh=0.000001, alpha=0.001)
 
-# 考虑对数据标准化，将数据按其属性减均值，然后除方差
+# 3 根据梯度值停止
+    #stop_type为stop_grad,设定阈值，大约迭代4w次
+##runExpe(orig_data, theta, n, STOP_GRAD, thresh=0.05, alpha=0.001)
+'''
+
+'''
+# 开始对梯度下降的方法进行讨论和选择：
+##runExpe(orig_data, theta, 1, STOP_ITER, thresh=5000, alpha=0.000001)
+#   随机取样波动非常大，完全不收敛，学习率也过大
+##runExpe(orig_data, theta, 16, STOP_ITER, thresh=5000, alpha=0.001)
+#   随机小批量取样，虽然样本大了，但是浮动仍然大
+# 最终考虑对数据标准化，将数据按其属性减均值，然后除方差
 # 最后得到的结果是对每个属性/每列来说所有数据都聚集在0附近，方差为1
+'''
 from sklearn import preprocessing as pp
 def data_standardize(data):
     scale_data = data.copy()
     scale_data[:, 1:3] = pp.scale(data[:, 1:3])
     return scale_data
 scaled_data=data_standardize(orig_data)
-##runExpe(scaled_data, theta, n, STOP_ITER, thresh=5000, alpha=0.001)
 
 ##runExpe(scaled_data, theta, n, STOP_GRAD, thresh=0.02, alpha=0.001)
 # 迭代次数越多损失下降越多，更精确
-
 ##theta = runExpe(scaled_data, theta, 1, STOP_GRAD, thresh=0.002/5, alpha=0.001)
 # 随机梯度下降更快，但是需要的迭代次数也需要越多，还是用batch比较合适
 
 theta = runExpe(scaled_data, theta, 16, STOP_GRAD, thresh=0.002*2, alpha=0.001)
 
-##plt.show()
-
-# 2 根据损失值停止
-    # stop_type为stop_cost,不人为设置迭代次数，设定阈值 1E-6, 大约需要11w次迭代
-##runExpe(orig_data, theta, n, STOP_COST, thresh=0.000001, alpha=0.001)
-##plt.show()
-
-# 3 根据梯度值停止
-    #stop_type为stop_grad,设定阈值，大约迭代4w次
-##runExpe(orig_data, theta, n, STOP_GRAD, thresh=0.05, alpha=0.001)
-##plt.show()
-
 # 定义精度函数
-def predict(X, theta):
-    return [1 if x >= 0.5 else 0 for x in model(X, theta)]
+def predict(data_adj, theta):
+    scaled_X = data_adj[:, :3]
+    y = data_adj[:, 3]
+    predictions = [1 if p >= 0.5 else 0 for p in model(scaled_X, theta)]
+    correct = [1 if ((a == 1 and b == 1) or (a == 0 and b == 0)) else 0 for (a, b) in zip(predictions, y)]
+    accuracy = (sum(map(int, correct)) % len(correct))
+    print('accuracy = {0}%'.format(accuracy))
 
-scaled_X = scaled_data[:, :3]
-y = scaled_data[:, 3]
-predictions = predict(scaled_X, theta)
-correct = [1 if ((a == 1 and b == 1) or (a == 0 and b == 0)) else 0 for (a, b) in zip(predictions, y)]
-accuracy = (sum(map(int, correct)) % len(correct))
-print('accuracy = {0}%'.format(accuracy))
+predict(scaled_data,theta)
